@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Calculator</title>
+  <style>
+    *{
+        margin: 0;
+        padding: 0;
+     }
+    @font-face {
+        font-family: 'LCDMono2-Bold';
+        src:url('LCDMono2-Bold.ttf.woff') format('woff'),
+            url('LCDMono2-Bold.ttf.svg#LCDMono2-Bold') format('svg'),
+            url('LCDMono2-Bold.ttf.eot'),
+            url('LCDMono2-Bold.ttf.eot?#iefix') format('embedded-opentype'); 
+        font-weight: normal;
+        font-style: normal;
+    }
+     body {
+         font-family: monospace;
+     }
+    #bg-image {
+        background-color: #8BC6EC;
+        background-image: linear-gradient(135deg, #8BC6EC 0%, #9599E2 100%);
+        width: 100%;
+        height: 100%;
+        position: fixed;
+        z-index: -1;
+        background-size: cover;
+      }
+
+    #calculator {
+        text-align: center;
+        background-color: #F3F3F3;
+        width: 300px;
+        margin: auto;
+        border-radius: 10px;
+        display:grid;
+        grid-template:
+        [row1-start] "display display display display" 1fr [row1-end]
+        [row2-start] "buttons buttons buttons buttons" 1fr [row2-end]
+        [row3-start] "buttons buttons buttons buttons" 1fr [row3-end]
+        [row4-start] "buttons buttons buttons buttons" 1fr [row4-end]
+        [row5-start] "buttons buttons buttons buttons" 1fr [row5-end]
+        / 1fr 1fr 1fr 1fr;
+
+    }
+
+    #parent {
+        display:grid;
+        grid-template:
+        [row1-start] "ac ce percentage division" 1fr [row1-end]
+        [row2-start] "number7 number8 number9 multiply" 1fr [row2-end]
+        [row3-start] "number4 number5 number6 subtract" 1fr [row3-end]
+        [row4-start] "number1 number2 number3 plus" 1fr [row4-end]
+        [row5-start] "number0 decimal result plus" 1fr [row5-end]
+        / 1fr 1fr 1fr 1fr;
+        column-gap: 7%;
+        row-gap: 15px;
+        padding: 15px;
+        grid-area: buttons;
+        align-self: stretch;
+    }
+
+    .grid-item {
+        border: 1px solid #ffffff75;
+        text-align: center;
+        border-radius: 10px;
+        align-self: center;
+        padding: 10px;
+        background-color: #555658;
+        color: white;
+        font-size: 1.5em;
+        box-shadow: 2px 2px #CDCDCD;
+        font-weight: 500;
+        -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none; /* Safari */
+        -khtml-user-select: none; /* Konqueror HTML */
+        -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+        user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Edge, Opera and Firefox */
+    }
+
+    #displaycontainer {
+        background-color: #555658;
+        border-radius: 10px 10px 3px 3px;
+    }
+
+    #display {
+        background-color: #EAECD5;
+        color: #555658;
+        font-size: 1.5em;
+        text-align: right;
+        border-radius: 7px;
+        padding: 10px;
+        margin: 15px;
+        font-weight: bold;
+        height: 35%;
+        font-family: 'LCDMono2-Bold';
+    }
+
+    .hovering {
+        transform: scale(1.05);
+        border-color: #969882;
+    }
+
+    h1 {
+        text-align: center;
+        padding: 10px;
+    }
+  </style>
+</head>
+<body>
+    <div id="bg-image"></div>
+    
+    <main>
+        <h1>Calculator</h1>
+        <div id=calculator>
+        <div id="displaycontainer" style="grid-area: display;"><div id="display"></div></div>
+        <div id="parent">
+            <div id="reset" class="grid-item" style="grid-area: ac; background-color: #EA5352;">AC</div>
+            <div id="ce" class="grid-item" style="grid-area: ce; background-color: #EA5352;">CE</div>
+            <div id="%" class="grid-item" style="grid-area: percentage;">%</div>
+            <div id="/" class="grid-item" style="grid-area: division;">÷</div>
+            <div id="7" class="grid-item" style="grid-area: number7;">7</div>
+            <div id="8" class="grid-item" style="grid-area: number8;">8</div>
+            <div id="9" class="grid-item" style="grid-area: number9;">9</div>
+            <div id="*" class="grid-item" style="grid-area: multiply;">×</div>
+            <div id="4" class="grid-item" style="grid-area: number4;">4</div>
+            <div id="5" class="grid-item" style="grid-area: number5;">5</div>
+            <div id="6" class="grid-item" style="grid-area: number6;">6</div>
+            <div id="-" class="grid-item" style="grid-area: subtract;">-</div>
+            <div id="1" class="grid-item" style="grid-area: number1;">1</div>
+            <div id="2" class="grid-item" style="grid-area: number2;">2</div>
+            <div id="3" class="grid-item" style="grid-area: number3;">3</div>
+            <div id="+" class="grid-item" style="grid-area: plus; align-self: stretch; display: flex; justify-content: center; align-items: center;">+</div>
+            <div id="0" class="grid-item" style="grid-area: number0;">0</div>
+            <div id="." class="grid-item" style="grid-area: decimal;">.</div>
+            <div id="=" class="grid-item" style="grid-area: result;">=</div>
+        </div>
+        </div>
+    </main>
+    <script>
+        let cell = document.querySelectorAll(".grid-item");
+        let display = document.getElementById("display");
+        let currentValue = "";
+        let oldValue = 0;
+        let signal = "";
+        let operators = ["+","-","*","/"];
+        updateDisplay("0");
+
+        cell.forEach(btn => {
+            btn.addEventListener("click", inputValue); //Event listener click on div
+            btn.addEventListener("mouseover", mouseover); //Event listener hover on div
+            btn.addEventListener("mouseout", mouseout); //Event listener hover on div
+            btn.addEventListener("mousedown", mousedown);
+            btn.addEventListener("mouseup", mouseup);
+        });
+
+        function mouseover(e) {
+            e.target.classList.toggle('hovering');
+        }
+        function mouseout(e) {
+            e.target.classList.toggle('hovering');
+        }
+
+        function mousedown(e) {
+            e.target.style.opacity = 0.7;
+        }
+        function mouseup(e) {
+            e.target.style.opacity = 1;
+        }
+
+        function inputValue(e) {
+            if (operators.indexOf(e.target.id) !== -1) return checkOperator(e);// If you press operator
+            else if (e.target.id === "reset") return reset();// If you press AC
+            else if (e.target.id === "ce") return clearEntry();// If you press CE
+            else if (e.target.id === "=") return result();// If you press =
+            else if (e.target.id === "%") return percentage();
+            else if (e.target.id === ".") {// If you press .
+                if (display.textContent.indexOf(".") !== -1){//check currentvalue for any decimal
+                    return;//if there is a decimal already return
+                }
+                currentValue = display.textContent + e.target.id;//if not and add the .
+                updateDisplay(currentValue);
+                return;
+            };
+            if(currentValue.length > 15) return;
+            currentValue += e.target.id;
+            updateDisplay(currentValue);
+        }
+
+        function checkOperator(e) {
+            if (!oldValue && currentValue) {
+                oldValue = currentValue;
+                currentValue = "";
+                signal = e.target.id;
+                return;
+            };
+            if (oldValue && currentValue) {
+                oldValue = operate(signal,Number(oldValue),Number(currentValue));
+                if (Number(currentValue) === 0) return error("ERROR");
+                if(oldValue.toString().length > 17) return error("ERROR TOO BIG!");
+                updateDisplay("");
+                setTimeout(() => {  updateDisplay(oldValue); }, 150);
+                currentValue = "";
+                signal = e.target.id;
+                return;
+            };
+            signal = e.target.id;
+        }
+
+        
+        function error(message) {
+            reset();
+            updateDisplay(message);
+        }
+
+        function reset() { //Resets calculator
+            updateDisplay("0");
+            oldValue = "";
+            currentValue = "";
+            signal = "";
+        }
+
+        function clearEntry() { //Clears current entry
+            if (signal) {
+                currentValue = "";
+                updateDisplay("0");
+                return;
+            }
+            reset();
+        }
+
+        function result() { //Gives the result when "=" is pressed
+            if (!oldValue && currentValue) {
+                oldValue = currentValue;
+                currentValue = "";
+                updateDisplay("");
+                setTimeout(() => {  updateDisplay(oldValue); }, 150);
+                return;
+            }
+            if (oldValue && currentValue && signal) {
+                oldValue = operate(signal,Number(oldValue),Number(currentValue));
+                if (Number(currentValue) === 0) return error("ERROR");
+                if(oldValue.toString().length > 17) return error("ERROR TOO BIG!");
+                updateDisplay("");
+                setTimeout(() => {  updateDisplay(oldValue); }, 150);
+                currentValue = "";
+                signal = "";
+                return;
+            };
+            if (oldValue) updateDisplay(oldValue);
+        }
+
+        function percentage() { //Gives the result when "=" is pressed
+            if (!oldValue && currentValue) {
+                oldValue = currentValue;
+                currentValue = "";
+                updateDisplay("");
+                setTimeout(() => {  updateDisplay(oldValue); }, 150);
+                return;
+            }
+            if (oldValue && currentValue && signal) {
+                if (signal==="+"||signal==="-") oldValue = operate(signal,Number(oldValue),Number((currentValue/100)*oldValue));
+                if (signal==="*"||signal==="/") oldValue = operate(signal,Number(oldValue),Number(currentValue/100));
+                if (Number(currentValue) === 0) return error("ERROR");
+                if(oldValue.toString().length > 17) return error("ERROR TOO BIG!");
+                updateDisplay("");
+                setTimeout(() => {  updateDisplay(oldValue); }, 150);
+                currentValue = "";
+                signal = "";
+                return;
+            };
+            if (oldValue) updateDisplay(oldValue);
+        }
+
+        function updateDisplay (value) {
+                display.textContent = "";
+                setTimeout(() => {  display.textContent = value; }, 100);
+        }
+
+        function operate(operator,a,b) { // Choose which operation to do
+            if (operator == "+") return sum(a,b);
+            if (operator == "-") return subtract(a,b);
+            if (operator == "*") return multiply(a,b);
+            if (operator == "/") return divide(a,b);
+            if (!operator) return display.textContent;
+        }
+
+        function sum(a,b) {
+            return Math.round(((a+b) + Number.EPSILON) * 100000000) / 100000000;
+        }
+        function subtract(a,b) {
+            return Math.round(((a-b) + Number.EPSILON) * 100000000) / 100000000;
+        }
+        function multiply(a,b) {
+            return Math.round(((a*b) + Number.EPSILON) * 100000000) / 100000000;
+        }
+        function divide(a,b) {
+            if (b === 0) return "ERROR";
+            return Math.round(((a/b) + Number.EPSILON) * 100000000) / 100000000;
+        }
+
+        
+        //-----------------------------Make Keyboard work------------------------
+        let keyCodes = [];
+        keyCodes[8]="ce";
+        keyCodes[13]="=";
+        keyCodes[48]="0";
+        keyCodes[49]="1";
+        keyCodes[50]="2";
+        keyCodes[51]="3";
+        keyCodes[52]="4";
+        keyCodes[53]="5";
+        keyCodes[54]="6";
+        keyCodes[55]="7";
+        keyCodes[56]="8";
+        keyCodes[57]="9";
+        keyCodes[82]="reset";
+        keyCodes[96]="0";
+        keyCodes[97]="1";
+        keyCodes[98]="2";
+        keyCodes[99]="3";
+        keyCodes[100]="4";
+        keyCodes[101]="5";
+        keyCodes[102]="6";
+        keyCodes[103]="7";
+        keyCodes[104]="8";
+        keyCodes[105]="9";
+        keyCodes[106]="*";
+        keyCodes[107]="+";
+        keyCodes[109]="-";
+        keyCodes[110]=".";
+        keyCodes[111]="/";
+        keyCodes[190]=".";
+
+        window.addEventListener('keydown', pressKey);
+        function pressKey(e) {
+            if (keyCodes[e.keyCode]) inputKeyboard(keyCodes[e.keyCode]);
+        }
+
+        function inputKeyboard(key) {
+            if (operators.indexOf(key) !== -1) return checkOperatorKey(key);// If you press operator
+            else if (key === "reset") return reset();// If you press AC
+            else if (key === "ce") return clearEntry();// If you press CE
+            else if (key === "=") return result();// If you press =
+            else if (key === ".") {// If you press .
+                if (display.textContent.indexOf(".") !== -1){//check currentvalue for any decimal
+                    return;//if there is a decimal already return
+                }
+                currentValue = display.textContent + key;//if not and add the .
+                updateDisplay(currentValue);
+                return;
+            };
+            if(currentValue.length > 15) return;
+            currentValue += key;
+            updateDisplay(currentValue);
+        }
+
+        
+        function checkOperatorKey(key) {
+            if (!oldValue && currentValue) {
+                oldValue = currentValue;
+                currentValue = "";
+                signal = key;
+                return;
+            };
+            if (oldValue && currentValue) {
+                oldValue = operate(signal,Number(oldValue),Number(currentValue));
+                if (Number(currentValue) === 0) return error("ERROR");
+                if(oldValue.toString().length > 17) return error("ERROR TOO BIG!");
+                updateDisplay("");
+                setTimeout(() => {  updateDisplay(oldValue); }, 150);
+                currentValue = "";
+                signal = key;
+                return;
+            };
+            signal = key;
+        }
+
+        //-----------------------------End of keyboard------------------------
+
+    </script>
+</body>
+</html>
