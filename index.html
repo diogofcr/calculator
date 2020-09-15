@@ -146,86 +146,125 @@
         let cell = document.querySelectorAll(".grid-item");
         let display = document.getElementById("display");
         let currentValue = "";
-        let oldValue = 0;
+        let value1 = null;
+        let value2 = null;
+        let repeatingValue = null;
+        let numberpressed = false;
+        let values = [];
         let signal = "";
+        let symbols = ["+","-","*","/","%","="];
         let operators = ["+","-","*","/"];
         updateDisplay("0");
 
         cell.forEach(btn => {
-            btn.addEventListener("click", inputValue); //Event listener click on div
-            btn.addEventListener("mouseover", mouseover); //Event listener hover on div
-            btn.addEventListener("mouseout", mouseout); //Event listener hover on div
-            btn.addEventListener("mousedown", mousedown);
-            btn.addEventListener("mouseup", mouseup);
+            btn.addEventListener("click", clickButton); //Event listener click on div
+            btn.addEventListener("mouseover", e => e.target.classList.toggle('hovering')); //Event listener hover on div
+            btn.addEventListener("mouseout", e => {e.target.classList.toggle('hovering'); e.target.style.opacity = 1}); //Event listener hover on div
+            btn.addEventListener("mousedown", e => e.target.style.opacity = 0.7);
+            btn.addEventListener("mouseup", e => e.target.style.opacity = 1);
         });
 
-        function mouseover(e) {
-            e.target.classList.toggle('hovering');
-        }
-        function mouseout(e) {
-            e.target.classList.toggle('hovering');
+        function updateDisplay (value) {
+            display.textContent = "";
+            setTimeout(() => {  display.textContent = value; }, 100);
         }
 
-        function mousedown(e) {
-            e.target.style.opacity = 0.7;
-        }
-        function mouseup(e) {
-            e.target.style.opacity = 1;
-        }
+        //-----------------------------MAKE ALL BUTTONS WORK------------------------
 
-        function inputValue(e) {
-            if (operators.indexOf(e.target.id) !== -1) return checkOperator(e);// If you press operator
+        function clickButton(e) {
+            if (!isNaN(Number(e.target.id))) return inputNumber(e);
+            else if (symbols.indexOf(e.target.id) !== -1) return arrayPush(e);// If you press operator
             else if (e.target.id === "reset") return reset();// If you press AC
             else if (e.target.id === "ce") return clearEntry();// If you press CE
+            else if (e.target.id === ".") return decimal();// If you press .
+        }
+
+        function inputNumber(e) {
+            if(currentValue.length > 15) return;
+            if(display.textContent !== "0") currentValue += e.target.id;
+            if(display.textContent === "0" & e.target.id === "0") return updateDisplay("0");
+            if(display.textContent === "0" & e.target.id !== "0") currentValue = e.target.id;
+            updateDisplay(currentValue);
+            numberpressed = true;
+        }
+
+        function arrayPush(e) {
+            let old = display.textContent;
+            if (old) updateDisplay(old);
+            currentValue = "";
+            if (numberpressed) {
+                if (values.length === 1 && signal) values[1]=Number(old);
+                if (values.length === 1 && !signal) values[0]=Number(old);
+                if (values.length === 0) values[0]=Number(old);
+                numberpressed = false;
+                if (repeatingValue != null) {values.length=0; values[0]=Number(old)};
+            }
+            if (operators.indexOf(e.target.id) !== -1) return checkOperator(e);// If you press operator
             else if (e.target.id === "=") return result();// If you press =
             else if (e.target.id === "%") return percentage();
-            else if (e.target.id === ".") {// If you press .
-                if (display.textContent.indexOf(".") !== -1){//check currentvalue for any decimal
-                    return;//if there is a decimal already return
-                }
-                currentValue = display.textContent + e.target.id;//if not and add the .
-                updateDisplay(currentValue);
-                return;
-            };
-            if(currentValue.length > 15) return;
-            currentValue += e.target.id;
-            updateDisplay(currentValue);
         }
 
         function checkOperator(e) {
-            if (!oldValue && currentValue) {
-                oldValue = currentValue;
-                currentValue = "";
+            if (repeatingValue != null) repeatingValue = null;
+            if (values.length === 2) {
+                let result = operate(signal,values[0],values[1]);
+                if (result === "error") return error("ERROR");
+                if(result.toString().length > 19) return error("ERROR TOO BIG!");
+                updateDisplay(result);
+                values.length = 0;
+                values[0]=result;
                 signal = e.target.id;
                 return;
-            };
-            if (oldValue && currentValue) {
-                oldValue = operate(signal,Number(oldValue),Number(currentValue));
-                if (Number(currentValue) === 0) return error("ERROR");
-                if(oldValue.toString().length > 17) return error("ERROR TOO BIG!");
-                updateDisplay("");
-                setTimeout(() => {  updateDisplay(oldValue); }, 150);
-                currentValue = "";
+            }
+            if (values.length === 1) return signal = e.target.id;
+            if (values.length === 0) {
+                values[0]=0;
                 signal = e.target.id;
-                return;
-            };
-            signal = e.target.id;
+            }
         }
 
-        
-        function error(message) {
-            reset();
-            updateDisplay(message);
+        function result() {
+            if (values.length === 2 && signal) {
+                if (repeatingValue == null) repeatingValue = values[1];
+                let result = operate(signal,values[0],Number(repeatingValue));
+                if (result === "error") return error("ERROR");
+                console.log(result.toString().length);
+                if(result.toString().length > 19) return error("ERROR TOO BIG!");
+                result = Number(result);
+                updateDisplay(result);
+                values.length = 0;
+                values[0] = result;
+                return;
+            }
+            if (values.length === 1 && signal) {
+                if (repeatingValue == null) repeatingValue = values[0];
+                let result = operate(signal,values[0],Number(repeatingValue));
+                if (result === "error") return error("ERROR");
+                if(result.toString().length > 19) return error("ERROR TOO BIG!");
+                result = Number(result);
+                updateDisplay(result);
+                values.length = 0;
+                values[0] = result;
+                return;
+            }
         }
 
         function reset() { //Resets calculator
-            updateDisplay("0");
-            oldValue = "";
             currentValue = "";
+            repeatingValue = null;
+            numberpressed = false;
+            values = [];
             signal = "";
+            updateDisplay("0");
         }
 
         function clearEntry() { //Clears current entry
+            if (repeatingValue) {
+                currentValue = "";
+                updateDisplay("0");
+                values.length = 0;
+                return;
+            }
             if (signal) {
                 currentValue = "";
                 updateDisplay("0");
@@ -234,55 +273,43 @@
             reset();
         }
 
-        function result() { //Gives the result when "=" is pressed
-            if (!oldValue && currentValue) {
-                oldValue = currentValue;
-                currentValue = "";
-                updateDisplay("");
-                setTimeout(() => {  updateDisplay(oldValue); }, 150);
-                return;
-            }
-            if (oldValue && currentValue && signal) {
-                oldValue = operate(signal,Number(oldValue),Number(currentValue));
-                if (Number(currentValue) === 0) return error("ERROR");
-                if(oldValue.toString().length > 17) return error("ERROR TOO BIG!");
-                updateDisplay("");
-                setTimeout(() => {  updateDisplay(oldValue); }, 150);
-                currentValue = "";
-                signal = "";
-                return;
-            };
-            if (oldValue) updateDisplay(oldValue);
+        function error(message) {
+            reset();
+            updateDisplay(message);
         }
 
-        function percentage() { //Gives the result when "=" is pressed
-            if (!oldValue && currentValue) {
-                oldValue = currentValue;
-                currentValue = "";
-                updateDisplay("");
-                setTimeout(() => {  updateDisplay(oldValue); }, 150);
-                return;
+        function decimal() {
+            if(currentValue.length > 15) return;
+            if (currentValue.indexOf(".") !== -1){//check currentvalue for any decimal
+                return;//if there is a decimal already, return
             }
-            if (oldValue && currentValue && signal) {
-                if (signal==="+"||signal==="-") oldValue = operate(signal,Number(oldValue),Number((currentValue/100)*oldValue));
-                if (signal==="*"||signal==="/") oldValue = operate(signal,Number(oldValue),Number(currentValue/100));
-                if (Number(currentValue) === 0) return error("ERROR");
-                if(oldValue.toString().length > 17) return error("ERROR TOO BIG!");
-                updateDisplay("");
-                setTimeout(() => {  updateDisplay(oldValue); }, 150);
-                currentValue = "";
-                signal = "";
-                return;
-            };
-            if (oldValue) updateDisplay(oldValue);
+
+            if(display.textContent !== "0" && currentValue) currentValue += ".";
+            if(display.textContent !== "0" && !currentValue) currentValue += "0.";
+            if(display.textContent === "0") currentValue = "0.";
+            updateDisplay(currentValue);
+            numberpressed = true;
         }
 
-        function updateDisplay (value) {
-                display.textContent = "";
-                setTimeout(() => {  display.textContent = value; }, 100);
+        function percentage() {
+            if (values.length === 2 && signal) {
+                let result;
+                if (signal==="+" || signal==="-") result = operate(signal,values[0],(Number(values[1])/100)*values[0]);
+                if (signal==="*" || signal==="/") result = operate(signal,values[0],Number(values[1])/100);
+                if (result === "error") return error("ERROR");
+                if(result.toString().length > 19) return error("ERROR TOO BIG!");
+                result = Number(result);
+                updateDisplay(result);
+                values.length = 0;
+                values[0] = result;
+                return;
+            }
         }
+
+        //-----------------------------OPERATE------------------------
 
         function operate(operator,a,b) { // Choose which operation to do
+            if (operator === "/" && b === 0) return "error";
             if (operator == "+") return sum(a,b);
             if (operator == "-") return subtract(a,b);
             if (operator == "*") return multiply(a,b);
@@ -291,94 +318,55 @@
         }
 
         function sum(a,b) {
-            return Math.round(((a+b) + Number.EPSILON) * 100000000) / 100000000;
+            return (a+b).toPrecision(13);
         }
         function subtract(a,b) {
-            return Math.round(((a-b) + Number.EPSILON) * 100000000) / 100000000;
+            return (a-b).toPrecision(13);
         }
         function multiply(a,b) {
-            return Math.round(((a*b) + Number.EPSILON) * 100000000) / 100000000;
+            return (a*b).toPrecision(13);
         }
         function divide(a,b) {
-            if (b === 0) return "ERROR";
-            return Math.round(((a/b) + Number.EPSILON) * 100000000) / 100000000;
+            return (a/b).toPrecision(13);
         }
 
         
         //-----------------------------Make Keyboard work------------------------
-        let keyCodes = [];
-        keyCodes[8]="ce";
-        keyCodes[13]="=";
-        keyCodes[48]="0";
-        keyCodes[49]="1";
-        keyCodes[50]="2";
-        keyCodes[51]="3";
-        keyCodes[52]="4";
-        keyCodes[53]="5";
-        keyCodes[54]="6";
-        keyCodes[55]="7";
-        keyCodes[56]="8";
-        keyCodes[57]="9";
-        keyCodes[82]="reset";
-        keyCodes[96]="0";
-        keyCodes[97]="1";
-        keyCodes[98]="2";
-        keyCodes[99]="3";
-        keyCodes[100]="4";
-        keyCodes[101]="5";
-        keyCodes[102]="6";
-        keyCodes[103]="7";
-        keyCodes[104]="8";
-        keyCodes[105]="9";
-        keyCodes[106]="*";
-        keyCodes[107]="+";
-        keyCodes[109]="-";
-        keyCodes[110]=".";
-        keyCodes[111]="/";
-        keyCodes[190]=".";
+        let keyCodes = {
+            8: {target: {id: "ce"}},
+            13: {target: {id: "="}},
+            48: {target: {id: "0"}},
+            49: {target: {id: "1"}},
+            50: {target: {id: "2"}},
+            51: {target: {id: "3"}},
+            52: {target: {id: "4"}},
+            53: {target: {id: "5"}},
+            54: {target: {id: "6"}},
+            55: {target: {id: "7"}},
+            56: {target: {id: "8"}},
+            57: {target: {id: "9"}},
+            82: {target: {id: "reset"}},
+            96: {target: {id: "0"}},
+            97: {target: {id: "1"}},
+            98: {target: {id: "2"}},
+            99: {target: {id: "3"}},
+            100: {target: {id: "4"}},
+            101: {target: {id: "5"}},
+            102: {target: {id: "6"}},
+            103: {target: {id: "7"}},
+            104: {target: {id: "8"}},
+            105: {target: {id: "9"}},
+            106: {target: {id: "*"}},
+            107: {target: {id: "+"}},
+            109: {target: {id: "-"}},
+            110: {target: {id: "."}},
+            111: {target: {id: "/"}},
+            190: {target: {id: "."}},
+        };
 
         window.addEventListener('keydown', pressKey);
         function pressKey(e) {
-            if (keyCodes[e.keyCode]) inputKeyboard(keyCodes[e.keyCode]);
-        }
-
-        function inputKeyboard(key) {
-            if (operators.indexOf(key) !== -1) return checkOperatorKey(key);// If you press operator
-            else if (key === "reset") return reset();// If you press AC
-            else if (key === "ce") return clearEntry();// If you press CE
-            else if (key === "=") return result();// If you press =
-            else if (key === ".") {// If you press .
-                if (display.textContent.indexOf(".") !== -1){//check currentvalue for any decimal
-                    return;//if there is a decimal already return
-                }
-                currentValue = display.textContent + key;//if not and add the .
-                updateDisplay(currentValue);
-                return;
-            };
-            if(currentValue.length > 15) return;
-            currentValue += key;
-            updateDisplay(currentValue);
-        }
-
-        
-        function checkOperatorKey(key) {
-            if (!oldValue && currentValue) {
-                oldValue = currentValue;
-                currentValue = "";
-                signal = key;
-                return;
-            };
-            if (oldValue && currentValue) {
-                oldValue = operate(signal,Number(oldValue),Number(currentValue));
-                if (Number(currentValue) === 0) return error("ERROR");
-                if(oldValue.toString().length > 17) return error("ERROR TOO BIG!");
-                updateDisplay("");
-                setTimeout(() => {  updateDisplay(oldValue); }, 150);
-                currentValue = "";
-                signal = key;
-                return;
-            };
-            signal = key;
+            if (keyCodes[e.keyCode]) clickButton(keyCodes[e.keyCode]);
         }
 
         //-----------------------------End of keyboard------------------------
